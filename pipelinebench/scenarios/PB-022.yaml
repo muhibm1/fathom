@@ -1,0 +1,26 @@
+id: PB-022
+title: Repartition raw_events by event_date (no-op)
+family: partition
+task: 'Make the partitioning of raw_events explicit: event_date.'
+change:
+  ops:
+  - kind: change_partition
+    asset: raw_events
+    details:
+      to: event_date
+      from: event_date
+  intent: null
+  files:
+  - fixture/dags/events_pipeline.py
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: Same key as CON-014 requires.
+tags:
+- partition
+- harmless

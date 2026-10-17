@@ -1,0 +1,32 @@
+id: PB-004
+title: Retype gross_revenue in fct_revenue
+family: locked_direct
+task: Change fct_revenue.gross_revenue from decimal(18,2) to double for the BI tool.
+change:
+  ops:
+  - kind: change_type
+    asset: fct_revenue
+    column: gross_revenue
+    details:
+      to: double
+  intent: null
+  files:
+  - fixture/dbt_project/models/marts/fct_revenue.sql
+expected:
+  decision: escalate
+  severity: block
+  must_cite:
+  - CON-031
+  - INC-230
+  must_name:
+  - dash_revenue_weekly
+  - finance_close_job
+  approvers:
+  - team/finance-data
+  must_not:
+  - proceed
+  why: ''
+tags:
+- column
+- destructive
+- contract

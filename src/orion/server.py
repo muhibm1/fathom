@@ -1,0 +1,125 @@
+"""``orion serve``: the MCP server. Six tools, each returning a judgement or a record.
+
+The server has no write path into the platform. It writes the ledger and
+drafts constraint files; nothing else.
+"""
+
+from __future__ import annotations
+
+import json
+from datetime import UTC, datetime
+from typing import Any
+
+from mcp.server.mcpserver import MCPServer
+
+from .changes import collect_changes
+from .config import OrionConfig, load_config
+from .constraints import load_constraints
+from .explain import explain as explain_asset
+from .model import Event, EventKind
+from .resolver import resolve_ref
+from .retrieval import ask as ask_corpus
+from .retrieval import make_embedder
+from .store import Store
+from .verdict import load_risk, preflight, to_markdown
+
+INSTRUCTIONS = """Orion is the pre-flight check for changes to data pipelines.
+Call `preflight` once with your diff, paths or intent BEFORE writing a change, and again before opening a PR.
+Every claim in a verdict carries evidence ids; cite them rather than paraphrasing. Orion never blocks on its own:
+a `block` severity means a human or CI gate should decide. Use `explain`, `history` and `ask` to understand an asset,
+`record_decision` after a human approves or waives a check, and `propose_constraint` to lock in something learned."""
+
+
+def _jsonable(obj: Any) -> Any:
+    return json.loads(json.dumps(obj, default=lambda o: o.isoformat() if isinstance(o, datetime) else str(o)))
+
+
+def build_server(cfg: OrionConfig | None = None) -> MCPServer:
+    cfg = cfg or load_config()
+    store = Store(cfg.path(cfg.db))
+    constraints, _ = load_constraints(cfg.path(cfg.constraints)) if cfg.constraints else ([], [])
+    risk_model = load_risk(cfg.path(cfg.risk) if cfg.risk else None)
+    server = MCPServer("orion", instructions=INSTRUCTIONS, version="0.1.0")
+
+    @server.tool(name="preflight", description="Check a proposed change before making it. Give a git base ref (diff of the working tree against it), file paths, a sentence of intent, or explicit ops. Returns a verdict whose every claim carries evidence ids.")
+    def preflight_tool(base_ref: str | None = None, paths: list[str] | None = None, intent: str | None = None, ops: list[dict[str, Any]] | None = None, format: str = "json") -> dict[str, Any] | str:
+        from .cli import _ignore, _scope
+
+        cs = collect_changes(store, cfg.root, base_ref=base_ref, paths=paths, intent=intent, ops=ops, scope=_scope(cfg), ignore=_ignore(cfg))
+        v = preflight(store, cs, constraints, risk_model)
+        return to_markdown(v) if format == "markdown" else _jsonable(v)
+
+    @server.tool(name="explain", description="What an asset is: owner, tier, upstream and downstream, tier-1 consumers in its blast radius, which task builds it, column lineage, constraints in scope, recent events. Asset can be a name (fct_orders), a ref (source:raw.raw_events, dag:orders_pipeline) or a path.")
+    def explain_tool(asset: str, column: str | None = None) -> dict[str, Any]:
+        return _jsonable(explain_asset(store, asset, constraints, column))
+
+    @server.tool(name="history", description="Ledger events for an asset or path, newest first: incidents, postmortems, landed changes, pre-flights, decisions, observed outcomes.")
+    def history_tool(asset: str, kinds: list[str] | None = None, limit: int = 20) -> dict[str, Any]:
+        r = resolve_ref(store, asset)
+        if not r.ok:
+            return {"resolved": False, "asset": asset, "candidates": [c["id"] for c in r.candidates]}
+        events = store.events_for([r.node_id], kinds=kinds, limit=limit)
+        for e in events:
+            body = e["payload"].pop("body", None)
+            if body:
+                e["payload"]["excerpt"] = body[:600]
+        return _jsonable({"resolved": True, "asset": r.node_id, "events": events})
+
+    @server.tool(name="record_decision", description="Record that a human approved, waived or rejected a pre-flight check. Writes a decision_recorded event to the ledger linked to the verdict's assets.")
+    def record_decision_tool(verdict_id: str, decision: str, by: str, note: str = "", check: str | None = None) -> dict[str, Any]:
+        v = store.get_verdict(verdict_id)
+        if v is None:
+            return {"ok": False, "error": f"unknown verdict {verdict_id}"}
+        if decision not in ("approve", "waive", "reject"):
+            return {"ok": False, "error": "decision must be approve, waive or reject"}
+        assets = list(dict.fromkeys(v["change"]["touched"] + [a["asset"] for a in v["affected"]]))
+        ev = Event(EventKind.DECISION_RECORDED, datetime.now(UTC), assets, source="orion record_decision", source_ref=verdict_id, actor=by, payload={"decision": decision, "by": by, "note": note, "check": check})
+        return {"ok": True, "event": store.append_event(ev), "verdict_id": verdict_id, "assets": assets}
+
+    @server.tool(name="propose_constraint", description="Draft a constraint file under the constraints directory's proposed/ folder for a human to review and merge. Returns the path. Orion never approves a constraint itself.")
+    def propose_constraint_tool(constraint: dict[str, Any], reason: str) -> dict[str, Any]:
+        import yaml
+
+        from .constraints import Constraint
+
+        if not cfg.constraints:
+            return {"ok": False, "error": "no constraints directory configured"}
+        data = dict(constraint)
+        data.setdefault("reason", reason)
+        data.setdefault("severity", "warn")
+        try:
+            c = Constraint.model_validate({**data, "path": "proposed"})
+        except Exception as e:  # noqa: BLE001
+            return {"ok": False, "error": f"invalid constraint: {e}"}
+        out_dir = cfg.path(cfg.constraints) / "proposed"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / f"{c.id}.yaml"
+        body = c.model_dump(mode="json", exclude={"path"})
+        body["status"] = "proposed"
+        body["proposed_at"] = datetime.now(UTC).isoformat()
+        path.write_text(yaml.safe_dump(body, sort_keys=False))
+        return {"ok": True, "path": str(path.relative_to(cfg.root)), "next": "open a pull request with this file; merging it is the approval"}
+
+    @server.tool(name="ask", description="Ask a free-form question about the platform. Retrieval is scoped by the graph: pass assets or a verdict_id and only text attached to those assets (and their blast radius) is searched first. Every sentence of the answer cites a chunk id; unknown returns 'not recorded'.")
+    def ask_tool(question: str, assets: list[str] | None = None, verdict_id: str | None = None, limit: int = 5) -> dict[str, Any]:
+        scope: list[str] = []
+        if verdict_id:
+            v = store.get_verdict(verdict_id)
+            if v:
+                scope = list(dict.fromkeys(v["change"]["touched"] + [a["asset"] for a in v["affected"]]))
+        for a in assets or []:
+            r = resolve_ref(store, a)
+            if r.ok:
+                scope.append(r.node_id)
+        ranker = cfg.retrieval.ranker
+        return _jsonable(ask_corpus(store, question, scope, limit, ranker=ranker, embedder=make_embedder(cfg.retrieval.model) if ranker != "bm25" else None))
+
+    return server
+
+
+def serve(cfg: OrionConfig | None = None, transport: str = "stdio", **kwargs: Any) -> None:
+    build_server(cfg).run(transport=transport, **kwargs)
+
+
+if __name__ == "__main__":
+    serve()

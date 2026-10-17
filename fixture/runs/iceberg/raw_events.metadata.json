@@ -1,0 +1,194 @@
+{
+ "format-version": 2,
+ "table-uuid": "5c0e8b7a-raw-events",
+ "location": "s3://lake/raw/raw_events",
+ "orion-asset": "source:raw.raw_events",
+ "current-schema-id": 1,
+ "schemas": [
+  {
+   "schema-id": 0,
+   "type": "struct",
+   "fields": [
+    {
+     "id": 1,
+     "name": "event_id",
+     "type": "string",
+     "required": true
+    },
+    {
+     "id": 2,
+     "name": "user_id",
+     "type": "string"
+    },
+    {
+     "id": 3,
+     "name": "event_type",
+     "type": "string"
+    },
+    {
+     "id": 4,
+     "name": "event_ts",
+     "type": "timestamp"
+    },
+    {
+     "id": 5,
+     "name": "event_date",
+     "type": "date"
+    },
+    {
+     "id": 6,
+     "name": "ingest_ts",
+     "type": "timestamp"
+    }
+   ]
+  },
+  {
+   "schema-id": 1,
+   "type": "struct",
+   "fields": [
+    {
+     "id": 1,
+     "name": "event_id",
+     "type": "string",
+     "required": true
+    },
+    {
+     "id": 2,
+     "name": "user_id",
+     "type": "string"
+    },
+    {
+     "id": 3,
+     "name": "event_type",
+     "type": "string"
+    },
+    {
+     "id": 4,
+     "name": "event_ts",
+     "type": "timestamp"
+    },
+    {
+     "id": 5,
+     "name": "event_date",
+     "type": "date"
+    },
+    {
+     "id": 6,
+     "name": "ingest_ts",
+     "type": "timestamp"
+    },
+    {
+     "id": 7,
+     "name": "session_id",
+     "type": "string"
+    }
+   ]
+  }
+ ],
+ "default-spec-id": 0,
+ "partition-specs": [
+  {
+   "spec-id": 0,
+   "fields": [
+    {
+     "source-id": 5,
+     "field-id": 1000,
+     "name": "event_date",
+     "transform": "identity"
+    }
+   ]
+  },
+  {
+   "spec-id": 1,
+   "fields": [
+    {
+     "source-id": 6,
+     "field-id": 1001,
+     "name": "ingest_ts_day",
+     "transform": "day"
+    }
+   ]
+  }
+ ],
+ "current-snapshot-id": 5,
+ "snapshots": [
+  {
+   "snapshot-id": 1,
+   "timestamp-ms": 1781491920000,
+   "schema-id": 0,
+   "summary": {
+    "operation": "append",
+    "added-records": "1840221",
+    "partition-spec-id": 0
+   }
+  },
+  {
+   "snapshot-id": 2,
+   "parent-snapshot-id": 1,
+   "timestamp-ms": 1782873660000,
+   "schema-id": 0,
+   "summary": {
+    "operation": "overwrite",
+    "added-records": "1902310",
+    "deleted-records": "1840221",
+    "partition-spec-id": 1
+   }
+  },
+  {
+   "snapshot-id": 3,
+   "parent-snapshot-id": 2,
+   "timestamp-ms": 1782897600000,
+   "schema-id": 0,
+   "summary": {
+    "operation": "overwrite",
+    "added-records": "1902310",
+    "deleted-records": "1902310",
+    "partition-spec-id": 0
+   }
+  },
+  {
+   "snapshot-id": 4,
+   "parent-snapshot-id": 3,
+   "timestamp-ms": 1789872900000,
+   "schema-id": 1,
+   "summary": {
+    "operation": "append",
+    "added-records": "2210004",
+    "partition-spec-id": 0
+   }
+  },
+  {
+   "snapshot-id": 5,
+   "parent-snapshot-id": 4,
+   "timestamp-ms": 1792032840000,
+   "schema-id": 1,
+   "summary": {
+    "operation": "append",
+    "added-records": "2301117",
+    "partition-spec-id": 0
+   }
+  }
+ ],
+ "snapshot-log": [
+  {
+   "snapshot-id": 1,
+   "timestamp-ms": 1781491920000
+  },
+  {
+   "snapshot-id": 2,
+   "timestamp-ms": 1782873660000
+  },
+  {
+   "snapshot-id": 3,
+   "timestamp-ms": 1782897600000
+  },
+  {
+   "snapshot-id": 4,
+   "timestamp-ms": 1789872900000
+  },
+  {
+   "snapshot-id": 5,
+   "timestamp-ms": 1792032840000
+  }
+ ]
+}

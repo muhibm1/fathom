@@ -1,0 +1,95 @@
+"""``orion.yaml`` at the repository root tells Orion where things live."""
+
+from __future__ import annotations
+
+import subprocess
+from pathlib import Path
+from typing import Any, Literal
+
+import yaml
+from pydantic import BaseModel, Field
+
+
+class DbtConfig(BaseModel):
+    project: str
+
+
+class AirflowConfig(BaseModel):
+    dags: str
+
+
+class GitConfig(BaseModel):
+    paths: list[str] = Field(default_factory=list)
+    max_commits: int = 500
+
+
+class IncidentsConfig(BaseModel):
+    dir: str
+
+
+class RunsConfig(BaseModel):
+    """Run history: an Airflow run export (JSONL), dbt run_results.json files, Iceberg table metadata."""
+
+    airflow: str | None = None
+    dbt: list[str] = Field(default_factory=list)
+    iceberg: str | None = None
+
+
+class RetrievalConfig(BaseModel):
+    ranker: Literal["bm25", "hybrid", "embedding"] = "bm25"
+    model: str | None = None  # sentence-transformers model name; None uses the built-in hashed embedder
+
+
+class ReviewConfig(BaseModel):
+    provider: Literal["stub", "anthropic", "openai"] = "stub"
+    model: str | None = None
+    base_url: str | None = None
+    api_key_env: str | None = None  # name of the environment variable holding the key; never the key itself
+
+
+class Adapters(BaseModel):
+    dbt: DbtConfig | None = None
+    airflow: AirflowConfig | None = None
+    git: GitConfig | None = None
+    incidents: IncidentsConfig | None = None
+    runs: RunsConfig | None = None
+
+
+class OrionConfig(BaseModel):
+    db: str = ".orion/graph.duckdb"
+    constraints: str | None = None
+    risk: str | None = None
+    adapters: Adapters = Field(default_factory=Adapters)
+    retrieval: RetrievalConfig = Field(default_factory=RetrievalConfig)
+    review: ReviewConfig = Field(default_factory=ReviewConfig)
+    postflight_runs: int = 3
+    root: Path = Path(".")
+
+    def path(self, rel: str) -> Path:
+        return (self.root / rel).resolve()
+
+
+def repo_root(start: Path) -> Path:
+    try:
+        top = subprocess.run(
+            ["git", "-C", str(start), "rev-parse", "--show-toplevel"], check=True, capture_output=True, text=True
+        ).stdout.strip()
+        return Path(top)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return start.resolve()
+
+
+def load_config(path: str | Path | None = None, cwd: Path | None = None) -> OrionConfig:
+    cwd = cwd or Path.cwd()
+    if path is None:
+        for cand in [cwd / "orion.yaml", repo_root(cwd) / "orion.yaml"]:
+            if cand.exists():
+                path = cand
+                break
+    if path is None:
+        raise FileNotFoundError("orion.yaml not found; create one or pass --config")
+    path = Path(path)
+    data: dict[str, Any] = yaml.safe_load(path.read_text()) or {}
+    cfg = OrionConfig.model_validate(data)
+    cfg.root = path.parent.resolve()
+    return cfg

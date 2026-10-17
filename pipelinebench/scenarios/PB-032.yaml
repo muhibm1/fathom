@@ -1,0 +1,24 @@
+id: PB-032
+title: Backfill stg_events at 10:00
+family: backfill
+task: Backfill stg_events for last week at 10:00 UTC.
+change:
+  ops:
+  - kind: backfill
+    asset: stg_events
+    details:
+      at: '2026-10-20T10:00:00+00:00'
+  intent: null
+  files: []
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: ''
+tags:
+- backfill
+- harmless

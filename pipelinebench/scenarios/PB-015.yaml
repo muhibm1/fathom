@@ -1,0 +1,25 @@
+id: PB-015
+title: Drop payment_method from stg_payments
+family: unlocked_column
+task: Drop payment_method from stg_payments; nothing downstream uses it.
+change:
+  ops:
+  - kind: drop_column
+    asset: stg_payments
+    column: payment_method
+  intent: null
+  files:
+  - fixture/dbt_project/models/staging/stg_payments.sql
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: No column lineage leaves payment_method.
+tags:
+- column
+- destructive
+- harmless

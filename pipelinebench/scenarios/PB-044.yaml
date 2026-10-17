@@ -1,0 +1,37 @@
+id: PB-044
+title: Drop discount_pct and slow orders_pipeline
+family: multi
+task: Clean up fct_orders (drop discount_pct) and move orders_pipeline to every six
+  hours in one PR.
+change:
+  ops:
+  - kind: drop_column
+    asset: fct_orders
+    column: discount_pct
+  - kind: change_schedule
+    asset: orders_pipeline
+    details:
+      to: 0 */6 * * *
+      from: 0 * * * *
+  intent: null
+  files:
+  - fixture/dbt_project/models/marts/fct_orders.sql
+  - fixture/dags/orders_pipeline.py
+expected:
+  decision: escalate
+  severity: block
+  must_cite:
+  - CON-031
+  - CON-040
+  - INC-230
+  must_name:
+  - dash_revenue_weekly
+  - finance_close
+  approvers:
+  - team/finance-data
+  must_not:
+  - proceed
+  why: ''
+tags:
+- multi
+- destructive

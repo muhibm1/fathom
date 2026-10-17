@@ -1,0 +1,62 @@
+version: 2
+models:
+  - name: fct_orders
+    description: One row per order with payments folded in. Read by finance and growth.
+    meta: { owner: team/data-platform, tier: 1 }
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+      - name: net_amount
+        description: amount after discount_pct
+  - name: fct_revenue
+    description: Daily revenue by currency. Public contract; columns are locked (CON-031).
+    meta: { owner: team/finance-data, tier: 1, contract: true }
+    config:
+      contract: { enforced: false }
+  - name: fct_refunds
+    meta: { owner: team/finance-data, tier: 1 }
+  - name: dim_customers
+    meta: { owner: team/growth-analytics, tier: 2 }
+  - name: dim_products
+    meta: { owner: team/product-analytics, tier: 3 }
+  - name: fct_sessions
+    meta: { owner: team/product-analytics, tier: 2 }
+  - name: fct_daily_active_users
+    meta: { owner: team/product-analytics, tier: 2 }
+  - name: fct_product_engagement
+    meta: { owner: team/product-analytics, tier: 3 }
+  - name: mart_churn_scores
+    meta: { owner: team/growth-analytics, tier: 2 }
+exposures:
+  - name: dash_revenue_weekly
+    type: dashboard
+    maturity: high
+    owner: { name: Finance Data, email: finance-data@example.com }
+    meta: { owner: team/finance-data, tier: 1 }
+    depends_on: [ref('fct_revenue'), ref('fct_orders')]
+    description: Weekly revenue dashboard reviewed by the CFO on Mondays.
+  - name: finance_close_job
+    type: application
+    maturity: high
+    owner: { name: Finance Data, email: finance-data@example.com }
+    meta: { owner: team/finance-data, tier: 1, sla: "06:00 UTC daily" }
+    depends_on: [ref('fct_revenue'), ref('fct_refunds')]
+    description: Month-end close export; filters fct_revenue by currency.
+  - name: dash_customer_health
+    type: dashboard
+    maturity: medium
+    owner: { name: Growth, email: growth@example.com }
+    meta: { owner: team/growth-analytics, tier: 2 }
+    depends_on: [ref('dim_customers'), ref('mart_churn_scores')]
+  - name: dash_product_analytics
+    type: dashboard
+    maturity: medium
+    owner: { name: Product Analytics, email: product@example.com }
+    meta: { owner: team/product-analytics, tier: 2 }
+    depends_on: [ref('fct_sessions'), ref('fct_product_engagement'), ref('fct_daily_active_users')]
+  - name: ml_churn_training
+    type: ml
+    maturity: low
+    owner: { name: Growth, email: growth@example.com }
+    meta: { owner: team/growth-analytics, tier: 3 }
+    depends_on: [ref('mart_churn_scores')]

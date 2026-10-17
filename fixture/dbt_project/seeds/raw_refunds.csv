@@ -1,0 +1,2 @@
+refund_id,order_id,amount,refunded_at,reason
+7001,103,45.00,2026-09-08 12:00:00,damaged

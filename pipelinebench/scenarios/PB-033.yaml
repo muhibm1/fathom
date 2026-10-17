@@ -1,0 +1,28 @@
+id: PB-033
+title: Move orders_pipeline to every six hours
+family: schedule
+task: Change orders_pipeline from hourly to every six hours to cut warehouse cost.
+change:
+  ops:
+  - kind: change_schedule
+    asset: orders_pipeline
+    details:
+      to: 0 */6 * * *
+      from: 0 * * * *
+  intent: null
+  files:
+  - fixture/dags/orders_pipeline.py
+expected:
+  decision: proceed_with_checks
+  severity: warn
+  must_cite:
+  - CON-040
+  must_name:
+  - finance_close
+  approvers:
+  - team/finance-data
+  - team/data-platform
+  must_not: []
+  why: ''
+tags:
+- schedule

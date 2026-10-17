@@ -1,0 +1,12 @@
+id: CON-031
+scope:
+  assets: [model:fct_revenue, model:fct_orders]
+  columns: "*"
+rule:
+  kind: columns_locked
+  allow: [add]
+severity: block
+reason: fct_revenue columns are a public contract read by finance close; fct_orders feeds them.
+source: INC-230
+approvers: [team/finance-data]
+expires: null

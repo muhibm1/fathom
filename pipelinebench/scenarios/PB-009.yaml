@@ -1,0 +1,25 @@
+id: PB-009
+title: Add refund_total to fct_revenue
+family: locked_add
+task: Add refund_total to fct_revenue so the dashboard can show net of refunds.
+change:
+  ops:
+  - kind: add_column
+    asset: fct_revenue
+    column: refund_total
+  intent: null
+  files:
+  - fixture/dbt_project/models/marts/fct_revenue.sql
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: ''
+tags:
+- column
+- additive
+- contract

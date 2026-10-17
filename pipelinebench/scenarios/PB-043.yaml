@@ -1,0 +1,24 @@
+id: PB-043
+title: Add tenure to dim_customers
+family: additive
+task: Add a tenure column to dim_customers.
+change:
+  ops:
+  - kind: add_column
+    asset: dim_customers
+    column: tenure
+  intent: null
+  files:
+  - fixture/dbt_project/models/marts/dim_customers.sql
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: ''
+tags:
+- column
+- additive

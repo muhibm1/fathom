@@ -1,0 +1,16 @@
+# Orion fixture platform ownership
+/dbt_project/models/staging/        @team/data-platform
+/dbt_project/models/intermediate/   @team/data-platform
+/dbt_project/models/marts/fct_orders.sql       @team/data-platform
+/dbt_project/models/marts/fct_revenue.sql      @team/finance-data
+/dbt_project/models/marts/fct_refunds.sql      @team/finance-data
+/dbt_project/models/marts/dim_customers.sql    @team/growth-analytics
+/dbt_project/models/marts/mart_churn_scores.sql @team/growth-analytics
+/dbt_project/models/marts/dim_products.sql     @team/product-analytics
+/dbt_project/models/marts/fct_sessions.sql     @team/product-analytics
+/dbt_project/models/marts/fct_daily_active_users.sql @team/product-analytics
+/dbt_project/models/marts/fct_product_engagement.sql @team/product-analytics
+/dags/orders_pipeline.py   @team/data-platform
+/dags/events_pipeline.py   @team/data-platform
+/dags/finance_close.py     @team/finance-data
+/orion/constraints/        @team/data-platform

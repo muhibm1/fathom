@@ -1,0 +1,28 @@
+id: PB-001
+title: Drop discount_pct from fct_orders
+family: locked_direct
+task: Remove the unused discount_pct column from fct_orders; nothing selects it.
+change:
+  ops:
+  - kind: drop_column
+    asset: fct_orders
+    column: discount_pct
+  intent: null
+  files:
+  - fixture/dbt_project/models/marts/fct_orders.sql
+expected:
+  decision: escalate
+  severity: block
+  must_cite:
+  - CON-031
+  - INC-230
+  must_name:
+  - dash_revenue_weekly
+  approvers:
+  - team/finance-data
+  must_not:
+  - proceed
+  why: CON-031 locks fct_orders columns; INC-230 was this exact change.
+tags:
+- column
+- destructive

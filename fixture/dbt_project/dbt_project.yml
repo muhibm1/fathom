@@ -1,0 +1,21 @@
+name: pipelinebench
+version: "0.1.0"
+config-version: 2
+profile: pipelinebench
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+models:
+  pipelinebench:
+    staging:
+      +materialized: view
+      +tags: ["staging"]
+    intermediate:
+      +materialized: ephemeral
+    marts:
+      +materialized: table
+seeds:
+  pipelinebench:
+    +schema: raw

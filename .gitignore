@@ -1,0 +1,12 @@
+.venv/
+.orion/
+__pycache__/
+*.pyc
+*.duckdb
+*.duckdb.wal
+fixture/dbt_project/target/
+fixture/dbt_project/logs/
+fixture/dbt_project/dbt_packages/
+.pytest_cache/
+.ruff_cache/
+dist/

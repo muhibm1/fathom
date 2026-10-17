@@ -1,0 +1,25 @@
+id: PB-023
+title: Repartition raw_events by ingest_ts (intent)
+family: partition
+task: Repartition raw_events by ingest_ts.
+change:
+  ops: []
+  intent: repartition raw_events by ingest_ts
+  files: []
+expected:
+  decision: escalate
+  severity: block
+  must_cite:
+  - CON-014
+  - INC-214
+  must_name:
+  - fct_daily_active_users
+  approvers:
+  - team/data-platform
+  must_not:
+  - proceed
+  why: ''
+tags:
+- partition
+- destructive
+- intent

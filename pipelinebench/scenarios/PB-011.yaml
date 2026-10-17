@@ -1,0 +1,30 @@
+id: PB-011
+title: Drop discount_pct from stg_orders
+family: locked_via_lineage
+task: Drop discount_pct from stg_orders; the raw column is being retired.
+change:
+  ops:
+  - kind: drop_column
+    asset: stg_orders
+    column: discount_pct
+  intent: null
+  files:
+  - fixture/dbt_project/models/staging/stg_orders.sql
+expected:
+  decision: escalate
+  severity: block
+  must_cite:
+  - CON-031
+  - INC-230
+  must_name:
+  - fct_revenue
+  - dash_revenue_weekly
+  approvers:
+  - team/finance-data
+  must_not:
+  - proceed
+  why: stg_orders.discount_pct -> fct_orders.net_amount -> fct_revenue.gross_revenue.
+tags:
+- column
+- destructive
+- lineage

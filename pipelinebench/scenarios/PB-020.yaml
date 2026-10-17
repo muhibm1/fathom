@@ -1,0 +1,29 @@
+id: PB-020
+title: Drop status from stg_orders
+family: locked_via_lineage
+task: Drop status from stg_orders; downstream should use the orders status table.
+change:
+  ops:
+  - kind: drop_column
+    asset: stg_orders
+    column: status
+  intent: null
+  files:
+  - fixture/dbt_project/models/staging/stg_orders.sql
+expected:
+  decision: escalate
+  severity: block
+  must_cite:
+  - CON-031
+  - INC-230
+  must_name:
+  - fct_orders
+  approvers:
+  - team/finance-data
+  must_not:
+  - proceed
+  why: ''
+tags:
+- column
+- destructive
+- lineage

@@ -1,0 +1,25 @@
+id: PB-018
+title: Drop order_count from int_customer_orders
+family: unlocked_column
+task: Drop order_count from int_customer_orders.
+change:
+  ops:
+  - kind: drop_column
+    asset: int_customer_orders
+    column: order_count
+  intent: null
+  files:
+  - fixture/dbt_project/models/intermediate/int_customer_orders.sql
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: ''
+tags:
+- column
+- destructive
+- harmless

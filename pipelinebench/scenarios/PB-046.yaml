@@ -1,0 +1,27 @@
+id: PB-046
+title: Swap payment_method for processor
+family: multi
+task: Replace stg_payments.payment_method with a processor column.
+change:
+  ops:
+  - kind: drop_column
+    asset: stg_payments
+    column: payment_method
+  - kind: add_column
+    asset: stg_payments
+    column: processor
+  intent: null
+  files:
+  - fixture/dbt_project/models/staging/stg_payments.sql
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: ''
+tags:
+- multi
+- harmless

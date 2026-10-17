@@ -1,0 +1,23 @@
+id: PB-037
+title: Raise retries on orders_pipeline
+family: schedule
+task: Set retries=3 on orders_pipeline's default_args.
+change:
+  ops:
+  - kind: modify
+    asset: orders_pipeline
+  intent: null
+  files:
+  - fixture/dags/orders_pipeline.py
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: ''
+tags:
+- dag
+- harmless

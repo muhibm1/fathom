@@ -1,0 +1,22 @@
+id: PB-048
+title: Describe stg_products
+family: distractor
+task: Add a description to stg_products in schema.yml.
+change:
+  ops:
+  - kind: modify
+    asset: stg_products
+  intent: null
+  files:
+  - fixture/dbt_project/models/staging/schema.yml
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: ''
+tags:
+- harmless

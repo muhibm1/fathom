@@ -1,0 +1,7 @@
+order_id,customer_id,order_date,status,amount,discount_pct,currency
+101,1,2026-09-01,completed,120.00,0,USD
+102,2,2026-09-02,completed,80.50,10,USD
+103,1,2026-09-05,returned,45.00,0,EUR
+104,3,2026-09-07,completed,300.00,5,USD
+105,4,2026-09-09,shipped,60.00,0,USD
+106,5,2026-09-12,completed,15.25,0,EUR

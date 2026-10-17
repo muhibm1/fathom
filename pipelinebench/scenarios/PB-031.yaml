@@ -1,0 +1,24 @@
+id: PB-031
+title: Backfill fct_orders at noon
+family: backfill
+task: Rebuild fct_orders for September at 12:00 UTC.
+change:
+  ops:
+  - kind: backfill
+    asset: fct_orders
+    details:
+      at: '2026-10-20T12:00:00+00:00'
+  intent: null
+  files: []
+expected:
+  decision: proceed_with_checks
+  severity: warn
+  must_cite: []
+  must_name:
+  - dash_revenue_weekly
+  approvers: []
+  must_not: []
+  why: CON-022 covers raw_events only, but the rebuild reaches the finance dashboard
+    while it runs.
+tags:
+- backfill

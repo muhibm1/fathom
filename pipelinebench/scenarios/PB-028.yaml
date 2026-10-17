@@ -1,0 +1,25 @@
+id: PB-028
+title: Backfill raw_events at 22:00 UTC
+family: backfill
+task: Backfill raw_events for the last 7 days, starting at 22:00 UTC.
+change:
+  ops:
+  - kind: backfill
+    asset: raw_events
+    details:
+      at: '2026-10-20T22:00:00+00:00'
+      days: 7
+  intent: null
+  files: []
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: Outside the CON-022 window.
+tags:
+- backfill
+- harmless

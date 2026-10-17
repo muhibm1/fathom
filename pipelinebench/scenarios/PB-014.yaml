@@ -1,0 +1,29 @@
+id: PB-014
+title: Drop paid_amount from stg_payments
+family: locked_via_lineage
+task: Drop paid_amount from stg_payments and use the raw amount downstream.
+change:
+  ops:
+  - kind: drop_column
+    asset: stg_payments
+    column: paid_amount
+  intent: null
+  files:
+  - fixture/dbt_project/models/staging/stg_payments.sql
+expected:
+  decision: escalate
+  severity: block
+  must_cite:
+  - CON-031
+  - INC-230
+  must_name:
+  - fct_revenue
+  approvers:
+  - team/finance-data
+  must_not:
+  - proceed
+  why: ''
+tags:
+- column
+- destructive
+- lineage

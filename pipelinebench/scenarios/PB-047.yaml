@@ -1,0 +1,38 @@
+id: PB-047
+title: Repartition and backfill raw_events
+family: multi
+task: Repartition raw_events by ingest_ts and backfill the last 30 days starting at
+  10:00 UTC.
+change:
+  ops:
+  - kind: change_partition
+    asset: raw_events
+    details:
+      to: ingest_ts
+      from: event_date
+  - kind: backfill
+    asset: raw_events
+    details:
+      at: '2026-10-20T10:00:00+00:00'
+      days: 30
+  intent: null
+  files:
+  - fixture/dags/events_pipeline.py
+expected:
+  decision: escalate
+  severity: block
+  must_cite:
+  - CON-014
+  - CON-022
+  - INC-214
+  - INC-241
+  must_name:
+  - fct_daily_active_users
+  approvers:
+  - team/data-platform
+  must_not:
+  - proceed
+  why: ''
+tags:
+- multi
+- destructive

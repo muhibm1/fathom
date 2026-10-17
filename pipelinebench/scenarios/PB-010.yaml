@@ -1,0 +1,32 @@
+id: PB-010
+title: Rename currency in fct_revenue
+family: locked_direct
+task: Rename fct_revenue.currency to ccy to match the finance warehouse.
+change:
+  ops:
+  - kind: rename_column
+    asset: fct_revenue
+    column: currency
+    details:
+      to: ccy
+  intent: null
+  files:
+  - fixture/dbt_project/models/marts/fct_revenue.sql
+expected:
+  decision: escalate
+  severity: block
+  must_cite:
+  - CON-031
+  - INC-230
+  must_name:
+  - dash_revenue_weekly
+  - finance_close_job
+  approvers:
+  - team/finance-data
+  must_not:
+  - proceed
+  why: ''
+tags:
+- column
+- destructive
+- contract

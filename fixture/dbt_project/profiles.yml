@@ -1,0 +1,7 @@
+pipelinebench:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('PIPELINEBENCH_DB', 'warehouse.duckdb') }}"
+      threads: 4

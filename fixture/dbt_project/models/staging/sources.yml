@@ -1,0 +1,16 @@
+version: 2
+sources:
+  - name: raw
+    schema: main_raw
+    meta: { owner: team/data-platform, tier: 2 }
+    tables:
+      - name: raw_customers
+      - name: raw_orders
+      - name: raw_payments
+      - name: raw_refunds
+      - name: raw_products
+      - name: raw_events
+        meta:
+          partition_key: event_date
+          tier: 1
+          backfill_window: "off-hours UTC only, see CON-022"

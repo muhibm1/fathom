@@ -1,0 +1,337 @@
+"""DuckDB-backed store for the asset graph, provenance, and the ledger.
+
+The graph is a property graph in ordinary tables. Local mode is one DuckDB
+file next to the checkout; the schema is plain SQL so a Postgres backend can
+share it later.
+"""
+
+from __future__ import annotations
+
+import json
+from collections import deque
+from collections.abc import Iterable
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import duckdb
+
+from .model import Edge, EdgeKind, Event, Node, Provenance
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS nodes (
+    id          VARCHAR PRIMARY KEY,
+    kind        VARCHAR NOT NULL,
+    name        VARCHAR NOT NULL,
+    properties  JSON    NOT NULL DEFAULT '{}',
+    tier        INTEGER,
+    owner       VARCHAR,
+    updated_at  TIMESTAMPTZ NOT NULL
+);
+CREATE TABLE IF NOT EXISTS edges (
+    id          VARCHAR PRIMARY KEY,
+    src         VARCHAR NOT NULL,
+    dst         VARCHAR NOT NULL,
+    kind        VARCHAR NOT NULL,
+    confidence  VARCHAR NOT NULL,
+    properties  JSON    NOT NULL DEFAULT '{}',
+    updated_at  TIMESTAMPTZ NOT NULL
+);
+CREATE TABLE IF NOT EXISTS provenance (
+    subject_id  VARCHAR NOT NULL,
+    adapter     VARCHAR NOT NULL,
+    source      VARCHAR NOT NULL,
+    ref         VARCHAR,
+    observed_at TIMESTAMPTZ NOT NULL
+);
+CREATE TABLE IF NOT EXISTS events (
+    id          VARCHAR PRIMARY KEY,
+    kind        VARCHAR NOT NULL,
+    occurred_at TIMESTAMPTZ NOT NULL,
+    assets      JSON    NOT NULL,
+    actor       VARCHAR,
+    payload     JSON    NOT NULL DEFAULT '{}',
+    source      VARCHAR NOT NULL,
+    source_ref  VARCHAR,
+    recorded_at TIMESTAMPTZ NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sync_state (
+    adapter     VARCHAR NOT NULL,
+    source      VARCHAR NOT NULL,
+    digest      VARCHAR NOT NULL,
+    synced_at   TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (adapter, source)
+);
+CREATE TABLE IF NOT EXISTS verdicts (
+    id          VARCHAR PRIMARY KEY,
+    issued_at   TIMESTAMPTZ NOT NULL,
+    severity    VARCHAR NOT NULL,
+    body        JSON    NOT NULL
+);
+CREATE TABLE IF NOT EXISTS chunks (
+    id          VARCHAR PRIMARY KEY,
+    text        VARCHAR NOT NULL,
+    source      VARCHAR NOT NULL,
+    asset_ids   VARCHAR[] NOT NULL,
+    tokens      VARCHAR NOT NULL
+);
+CREATE TABLE IF NOT EXISTS chunk_vectors (
+    chunk_id    VARCHAR NOT NULL,
+    model       VARCHAR NOT NULL,
+    vec         FLOAT[] NOT NULL,
+    PRIMARY KEY (chunk_id, model)
+);
+CREATE INDEX IF NOT EXISTS edges_src ON edges (src);
+CREATE INDEX IF NOT EXISTS edges_dst ON edges (dst);
+CREATE INDEX IF NOT EXISTS provenance_subject ON provenance (subject_id);
+"""
+
+
+class ProvenanceRequired(ValueError):
+    pass
+
+
+def _json_default(o: Any) -> Any:
+    return o.isoformat() if isinstance(o, datetime) else str(o)
+
+
+class Store:
+    def __init__(self, path: str | Path = ".orion/graph.duckdb"):
+        self.path = Path(path)
+        if str(self.path) != ":memory:":
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.con = duckdb.connect(str(self.path))
+        self.con.execute(SCHEMA)
+
+    # ------------------------------------------------------------------ writes
+    def upsert_node(self, node: Node) -> None:
+        if not node.provenance:
+            raise ProvenanceRequired(f"node {node.id} has no provenance")
+        self.con.execute(
+            """
+            INSERT INTO nodes (id, kind, name, properties, tier, owner, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, now())
+            ON CONFLICT (id) DO UPDATE SET
+                properties = excluded.properties,
+                tier = COALESCE(excluded.tier, nodes.tier),
+                owner = COALESCE(excluded.owner, nodes.owner),
+                updated_at = now()
+            """,
+            [node.id, str(node.kind), node.name, json.dumps(node.properties), node.tier, node.owner],
+        )
+        self._add_provenance(node.id, node.provenance)
+
+    def upsert_edge(self, edge: Edge) -> None:
+        if not edge.provenance:
+            raise ProvenanceRequired(f"edge {edge.id} has no provenance")
+        self.con.execute(
+            """
+            INSERT INTO edges (id, src, dst, kind, confidence, properties, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, now())
+            ON CONFLICT (id) DO UPDATE SET
+                confidence = excluded.confidence,
+                properties = excluded.properties,
+                updated_at = now()
+            """,
+            [edge.id, edge.src, edge.dst, str(edge.kind), str(edge.confidence), json.dumps(edge.properties)],
+        )
+        self._add_provenance(edge.id, edge.provenance)
+
+    def set_tier(self, node_id: str, tier: int) -> None:
+        self.con.execute("UPDATE nodes SET tier = ? WHERE id = ?", [tier, node_id])
+
+    def append_event(self, event: Event) -> str:
+        """Ledger writes are append-only; an existing id is left untouched."""
+        self.con.execute(
+            """
+            INSERT INTO events (id, kind, occurred_at, assets, actor, payload, source, source_ref, recorded_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, now())
+            ON CONFLICT (id) DO NOTHING
+            """,
+            [
+                event.id,
+                str(event.kind),
+                event.occurred_at,
+                json.dumps(event.assets),
+                event.actor,
+                json.dumps(event.payload, default=str),
+                event.source,
+                event.source_ref,
+            ],
+        )
+        return event.id
+
+    def _add_provenance(self, subject_id: str, records: Iterable[Provenance]) -> None:
+        for p in records:
+            # one row per (subject, adapter, source, ref): a re-sync refreshes observed_at rather than duplicating
+            self.con.execute(
+                "DELETE FROM provenance WHERE subject_id = ? AND adapter = ? AND source = ? AND ref IS NOT DISTINCT FROM ?",
+                [subject_id, p.adapter, p.source, p.ref],
+            )
+            self.con.execute(
+                "INSERT INTO provenance (subject_id, adapter, source, ref, observed_at) VALUES (?, ?, ?, ?, ?)",
+                [subject_id, p.adapter, p.source, p.ref, p.observed_at],
+            )
+
+    def put_verdict(self, verdict_id: str, body: dict[str, Any]) -> None:
+        self.con.execute(
+            "INSERT INTO verdicts (id, issued_at, severity, body) VALUES (?, ?, ?, ?) ON CONFLICT (id) DO NOTHING",
+            [verdict_id, body["issued_at"], body["severity"], json.dumps(body, default=_json_default)],
+        )
+
+    def get_verdict(self, verdict_id: str) -> dict[str, Any] | None:
+        row = self.con.execute("SELECT body FROM verdicts WHERE id = ?", [verdict_id]).fetchone()
+        return json.loads(row[0]) if row else None
+
+    def mark_synced(self, adapter: str, source: str, digest: str) -> None:
+        self.con.execute(
+            """
+            INSERT INTO sync_state (adapter, source, digest, synced_at) VALUES (?, ?, ?, now())
+            ON CONFLICT (adapter, source) DO UPDATE SET digest = excluded.digest, synced_at = now()
+            """,
+            [adapter, source, digest],
+        )
+
+    def last_digest(self, adapter: str, source: str) -> str | None:
+        row = self.con.execute(
+            "SELECT digest FROM sync_state WHERE adapter = ? AND source = ?", [adapter, source]
+        ).fetchone()
+        return row[0] if row else None
+
+    # ------------------------------------------------------------------- reads
+    def node(self, node_id: str) -> dict[str, Any] | None:
+        row = self.con.execute(
+            "SELECT id, kind, name, properties, tier, owner FROM nodes WHERE id = ?", [node_id]
+        ).fetchone()
+        return self._node_row(row) if row else None
+
+    def find_nodes(self, name: str | None = None, kind: str | None = None) -> list[dict[str, Any]]:
+        sql = "SELECT id, kind, name, properties, tier, owner FROM nodes WHERE 1=1"
+        args: list[Any] = []
+        if name is not None:
+            sql += " AND name = ?"
+            args.append(name)
+        if kind is not None:
+            sql += " AND kind = ?"
+            args.append(kind)
+        return [self._node_row(r) for r in self.con.execute(sql + " ORDER BY id", args).fetchall()]
+
+    def search_nodes(self, needle: str, limit: int = 10) -> list[dict[str, Any]]:
+        rows = self.con.execute(
+            """
+            SELECT id, kind, name, properties, tier, owner FROM nodes
+            WHERE kind <> 'column' AND lower(name) LIKE '%' || lower(?) || '%'
+            ORDER BY length(name), name LIMIT ?
+            """,
+            [needle, limit],
+        ).fetchall()
+        return [self._node_row(r) for r in rows]
+
+    def edges_from(self, node_id: str, kinds: Iterable[EdgeKind | str] | None = None) -> list[dict[str, Any]]:
+        return self._edges("src", node_id, kinds)
+
+    def edges_to(self, node_id: str, kinds: Iterable[EdgeKind | str] | None = None) -> list[dict[str, Any]]:
+        return self._edges("dst", node_id, kinds)
+
+    def provenance_for(self, subject_id: str) -> list[dict[str, Any]]:
+        rows = self.con.execute(
+            "SELECT adapter, source, ref, observed_at FROM provenance WHERE subject_id = ? ORDER BY observed_at DESC",
+            [subject_id],
+        ).fetchall()
+        return [dict(adapter=a, source=s, ref=r, observed_at=o) for a, s, r, o in rows]
+
+    def events_for(
+        self, asset_ids: Iterable[str], kinds: Iterable[str] | None = None, since: datetime | None = None, limit: int = 50
+    ) -> list[dict[str, Any]]:
+        ids = list(asset_ids)
+        if not ids:
+            return []
+        sql = """
+            SELECT e.id, e.kind, e.occurred_at, e.assets, e.actor, e.payload, e.source, e.source_ref
+            FROM events e, json_each(e.assets) a
+            WHERE a.value::VARCHAR IN ({})
+        """.format(",".join("?" for _ in ids))
+        args: list[Any] = [json.dumps(i) for i in ids]
+        if kinds:
+            ks = list(kinds)
+            sql += " AND e.kind IN ({})".format(",".join("?" for _ in ks))
+            args.extend(ks)
+        if since is not None:
+            sql += " AND e.occurred_at >= ?"
+            args.append(since)
+        sql += " GROUP BY ALL ORDER BY e.occurred_at DESC LIMIT ?"
+        args.append(limit)
+        rows = self.con.execute(sql, args).fetchall()
+        return [
+            dict(
+                id=i, kind=k, occurred_at=o, assets=json.loads(a), actor=ac,
+                payload=json.loads(p), source=s, source_ref=sr,
+            )
+            for i, k, o, a, ac, p, s, sr in rows
+        ]
+
+    def counts(self) -> dict[str, int]:
+        out = {}
+        for table in ("nodes", "edges", "provenance", "events", "verdicts", "chunks"):
+            out[table] = self.con.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
+        return out
+
+    # ------------------------------------------------------------------- walks
+    def walk(
+        self,
+        start: Iterable[str],
+        direction: str = "downstream",
+        kinds: Iterable[EdgeKind | str] = (EdgeKind.CONSUMES, EdgeKind.DEPENDS_ON, EdgeKind.DERIVES_FROM),
+        max_hops: int = 5,
+        always_include_tier: int | None = 1,
+        hard_cap: int = 50,
+    ) -> dict[str, dict[str, Any]]:
+        """Breadth-first walk. Returns {node_id: {hops, via_edge, path, edge_kind}}.
+
+        ``downstream`` follows edges that point *at* the start nodes (consumers,
+        dependants); ``upstream`` follows edges the start nodes point at.
+        Nodes within ``max_hops`` are returned. Beyond that the walk continues
+        (up to ``hard_cap``) but only tier-``always_include_tier`` nodes are
+        returned, so a long chain never hides the consumer that matters.
+        """
+        kinds = [str(k) for k in kinds]
+        starts = set(start)
+        seen: dict[str, dict[str, Any]] = {}
+        visited: set[str] = set(starts)
+        queue: deque[tuple[str, int, list[str]]] = deque((s, 0, [s]) for s in starts)
+        limit = max_hops if always_include_tier is None else hard_cap
+        while queue:
+            nid, hops, path = queue.popleft()
+            if hops >= limit:
+                continue
+            neighbours = self.edges_to(nid, kinds) if direction == "downstream" else self.edges_from(nid, kinds)
+            for e in neighbours:
+                nxt = e["src"] if direction == "downstream" else e["dst"]
+                if nxt in visited:
+                    continue
+                visited.add(nxt)
+                node = self.node(nxt)
+                tier = node["tier"] if node else None
+                if hops + 1 <= max_hops or tier == always_include_tier:
+                    seen[nxt] = {"hops": hops + 1, "via_edge": e["id"], "path": path + [nxt], "edge_kind": e["kind"]}
+                queue.append((nxt, hops + 1, path + [nxt]))
+        return seen
+
+    # ----------------------------------------------------------------- helpers
+    def _edges(self, col: str, node_id: str, kinds) -> list[dict[str, Any]]:
+        sql = f"SELECT id, src, dst, kind, confidence, properties FROM edges WHERE {col} = ?"
+        args: list[Any] = [node_id]
+        if kinds:
+            ks = [str(k) for k in kinds]
+            sql += " AND kind IN ({})".format(",".join("?" for _ in ks))
+            args.extend(ks)
+        rows = self.con.execute(sql + " ORDER BY id", args).fetchall()
+        return [dict(id=i, src=s, dst=d, kind=k, confidence=c, properties=json.loads(p)) for i, s, d, k, c, p in rows]
+
+    @staticmethod
+    def _node_row(row) -> dict[str, Any]:
+        i, k, n, p, t, o = row
+        return dict(id=i, kind=k, name=n, properties=json.loads(p), tier=t, owner=o)
+
+    def close(self) -> None:
+        self.con.close()

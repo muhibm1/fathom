@@ -1,0 +1,11 @@
+id: CON-022
+scope:
+  assets: [source:raw.raw_events]
+rule:
+  kind: no_backfill_window
+  window: { start: "06:00", end: "20:00", tz: UTC }
+severity: block
+reason: Daytime backfills take the shared spark_pool and starve the hourly orders pipeline.
+source: INC-241
+approvers: [team/data-platform]
+expires: null

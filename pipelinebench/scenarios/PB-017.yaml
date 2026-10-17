@@ -1,0 +1,27 @@
+id: PB-017
+title: Rename session_id in stg_events
+family: unlocked_column
+task: Rename stg_events.session_id to sid.
+change:
+  ops:
+  - kind: rename_column
+    asset: stg_events
+    column: session_id
+    details:
+      to: sid
+  intent: null
+  files:
+  - fixture/dbt_project/models/staging/stg_events.sql
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: ''
+tags:
+- column
+- destructive
+- harmless

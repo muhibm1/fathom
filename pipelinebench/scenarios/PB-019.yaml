@@ -1,0 +1,24 @@
+id: PB-019
+title: Add channel to stg_orders
+family: additive_upstream
+task: Add an acquisition channel column to stg_orders.
+change:
+  ops:
+  - kind: add_column
+    asset: stg_orders
+    column: channel
+  intent: null
+  files:
+  - fixture/dbt_project/models/staging/stg_orders.sql
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: ''
+tags:
+- column
+- additive

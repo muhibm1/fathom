@@ -1,0 +1,74 @@
+{
+ "metadata": {
+  "dbt_schema_version": "https://schemas.getdbt.com/dbt/run-results/v6.json",
+  "dbt_version": "1.10.0",
+  "generated_at": "2026-10-12T18:29:51Z",
+  "invocation_id": "b7e0c4d1-ci-2026-10-12"
+ },
+ "args": {
+  "which": "build",
+  "select": [
+   "tag:orders",
+   "fct_refunds"
+  ]
+ },
+ "elapsed_time": 41.2,
+ "results": [
+  {
+   "status": "success",
+   "unique_id": "model.pipelinebench.fct_orders",
+   "execution_time": 3.1,
+   "message": "OK created sql table model main.fct_orders",
+   "failures": null,
+   "timing": [
+    {
+     "name": "execute",
+     "started_at": "2026-10-12T18:30:40Z",
+     "completed_at": "2026-10-12T18:30:43Z"
+    }
+   ]
+  },
+  {
+   "status": "success",
+   "unique_id": "model.pipelinebench.fct_refunds",
+   "execution_time": 1.4,
+   "message": "OK",
+   "failures": null,
+   "timing": [
+    {
+     "name": "execute",
+     "started_at": "2026-10-12T18:30:44Z",
+     "completed_at": "2026-10-12T18:30:45Z"
+    }
+   ]
+  },
+  {
+   "status": "fail",
+   "unique_id": "test.pipelinebench.not_null_fct_refunds_order_id.9f2c1a",
+   "execution_time": 0.4,
+   "message": "Got 12 results, configured to fail if != 0",
+   "failures": 12,
+   "timing": [
+    {
+     "name": "execute",
+     "started_at": "2026-10-12T18:30:59Z",
+     "completed_at": "2026-10-12T18:31:00Z"
+    }
+   ]
+  },
+  {
+   "status": "pass",
+   "unique_id": "test.pipelinebench.unique_fct_orders_order_id.0a1b2c",
+   "execution_time": 0.3,
+   "message": null,
+   "failures": 0,
+   "timing": [
+    {
+     "name": "execute",
+     "started_at": "2026-10-12T18:31:00Z",
+     "completed_at": "2026-10-12T18:31:01Z"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,10 @@
+id: CON-040
+scope:
+  assets: [dag:orders_pipeline]
+rule:
+  kind: schedule_locked
+severity: warn
+reason: finance_close waits on orders_pipeline; a schedule change moves the 06:00 close.
+source: "exposure:finance_close_job"
+approvers: [team/finance-data, team/data-platform]
+expires: null

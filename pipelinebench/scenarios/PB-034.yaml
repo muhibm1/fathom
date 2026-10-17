@@ -1,0 +1,23 @@
+id: PB-034
+title: Move orders_pipeline to daily (intent)
+family: schedule
+task: Change the schedule of orders_pipeline to daily.
+change:
+  ops: []
+  intent: change the schedule of orders_pipeline to daily
+  files: []
+expected:
+  decision: proceed_with_checks
+  severity: warn
+  must_cite:
+  - CON-040
+  must_name:
+  - finance_close
+  approvers:
+  - team/finance-data
+  - team/data-platform
+  must_not: []
+  why: ''
+tags:
+- schedule
+- intent

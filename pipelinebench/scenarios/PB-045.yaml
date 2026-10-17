@@ -1,0 +1,28 @@
+id: PB-045
+title: Two additive columns
+family: multi
+task: Add currency_rate to fct_orders and refund_total to fct_revenue.
+change:
+  ops:
+  - kind: add_column
+    asset: fct_orders
+    column: currency_rate
+  - kind: add_column
+    asset: fct_revenue
+    column: refund_total
+  intent: null
+  files:
+  - fixture/dbt_project/models/marts/fct_orders.sql
+  - fixture/dbt_project/models/marts/fct_revenue.sql
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: ''
+tags:
+- multi
+- additive

@@ -1,0 +1,25 @@
+id: PB-016
+title: Drop region from stg_customers
+family: unlocked_column
+task: Drop region from stg_customers; it is being moved to a separate geo model.
+change:
+  ops:
+  - kind: drop_column
+    asset: stg_customers
+    column: region
+  intent: null
+  files:
+  - fixture/dbt_project/models/staging/stg_customers.sql
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: Reaches dim_customers and mart_churn_scores, tier 2, no constraint on the change.
+tags:
+- column
+- destructive
+- harmless

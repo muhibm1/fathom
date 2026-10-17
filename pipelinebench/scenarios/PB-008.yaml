@@ -1,0 +1,24 @@
+id: PB-008
+title: Add currency_rate to fct_orders
+family: locked_add
+task: Add a currency_rate column to fct_orders for multi-currency reporting.
+change:
+  ops:
+  - kind: add_column
+    asset: fct_orders
+    column: currency_rate
+  intent: null
+  files:
+  - fixture/dbt_project/models/marts/fct_orders.sql
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: CON-031 allows adds.
+tags:
+- column
+- additive

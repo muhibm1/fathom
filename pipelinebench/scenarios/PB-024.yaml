@@ -1,0 +1,25 @@
+id: PB-024
+title: Repartition raw_orders by order_date
+family: partition
+task: Partition raw_orders by order_date to speed up incremental loads.
+change:
+  ops:
+  - kind: change_partition
+    asset: raw_orders
+    details:
+      to: order_date
+      from: null
+  intent: null
+  files: []
+expected:
+  decision: proceed_with_checks
+  severity: warn
+  must_cite: []
+  must_name:
+  - fct_orders
+  approvers: []
+  must_not: []
+  why: No constraint, but a destructive change with tier-1 consumers downstream.
+tags:
+- partition
+- destructive

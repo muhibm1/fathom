@@ -1,0 +1,26 @@
+id: PB-036
+title: Move finance_close to 07:00
+family: schedule
+task: Run finance_close at 07:00 to give orders_pipeline more slack.
+change:
+  ops:
+  - kind: change_schedule
+    asset: finance_close
+    details:
+      to: 0 7 * * *
+      from: 0 6 * * *
+  intent: null
+  files:
+  - fixture/dags/finance_close.py
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: ''
+tags:
+- schedule
+- harmless

@@ -1,0 +1,10 @@
+id: CON-050
+scope:
+  assets: [model:fct_sessions]
+rule:
+  kind: deprecated
+severity: warn
+reason: fct_sessions is superseded by fct_daily_active_users and int_sessions; new models should not build on it. Scheduled for removal once dash_product_analytics migrates.
+source: null
+approvers: [team/product-analytics]
+expires: null

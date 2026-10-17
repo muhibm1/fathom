@@ -1,0 +1,11 @@
+id: CON-014
+scope:
+  assets: [source:raw.raw_events, model:stg_events]
+rule:
+  kind: partition_key
+  key: event_date
+severity: block
+reason: Partitioning events by ingest_ts double-counts late arrivals and took the pipeline down for six hours.
+source: INC-214
+approvers: [team/data-platform]
+expires: null

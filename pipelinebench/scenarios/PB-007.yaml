@@ -1,0 +1,29 @@
+id: PB-007
+title: Drop paid_amount from fct_orders
+family: locked_direct
+task: Drop paid_amount from fct_orders; payments live in their own mart now.
+change:
+  ops:
+  - kind: drop_column
+    asset: fct_orders
+    column: paid_amount
+  intent: null
+  files:
+  - fixture/dbt_project/models/marts/fct_orders.sql
+expected:
+  decision: escalate
+  severity: block
+  must_cite:
+  - CON-031
+  - INC-230
+  must_name:
+  - dash_revenue_weekly
+  - finance_close_job
+  approvers:
+  - team/finance-data
+  must_not:
+  - proceed
+  why: paid_amount feeds fct_revenue.collected_revenue.
+tags:
+- column
+- destructive

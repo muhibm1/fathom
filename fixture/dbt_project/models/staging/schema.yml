@@ -1,0 +1,17 @@
+version: 2
+models:
+  - name: stg_orders
+    meta: { owner: team/data-platform, tier: 2 }
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+  - name: stg_customers
+    meta: { owner: team/data-platform, tier: 2 }
+  - name: stg_payments
+    meta: { owner: team/data-platform, tier: 2 }
+  - name: stg_refunds
+    meta: { owner: team/finance-data, tier: 2 }
+  - name: stg_products
+    meta: { owner: team/product-analytics, tier: 3 }
+  - name: stg_events
+    meta: { owner: team/data-platform, tier: 2 }

@@ -1,0 +1,35 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - name: Install
+        run: |
+          uv venv .venv
+          uv pip install -e ".[fixture,dev]"
+      - name: Lint
+        run: .venv/bin/ruff check src tests
+      - name: Build the fixture platform
+        working-directory: fixture/dbt_project
+        env:
+          PIPELINEBENCH_DB: warehouse.duckdb
+        run: |
+          ../../.venv/bin/dbt build --profiles-dir . -q
+          ../../.venv/bin/dbt docs generate --profiles-dir . -q
+      - name: Test
+        run: .venv/bin/pytest -q
+      - name: Sync and explain
+        run: |
+          .venv/bin/orion sync
+          .venv/bin/orion explain fct_orders
+          .venv/bin/orion postflight --dry-run --summary
+          .venv/bin/orion propose
+          .venv/bin/pipelinebench check-ground-truth

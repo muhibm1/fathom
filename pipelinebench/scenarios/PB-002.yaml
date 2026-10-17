@@ -1,0 +1,28 @@
+id: PB-002
+title: Drop status from fct_orders
+family: locked_direct
+task: Drop the status column from fct_orders, it duplicates stg_orders.status.
+change:
+  ops:
+  - kind: drop_column
+    asset: fct_orders
+    column: status
+  intent: null
+  files:
+  - fixture/dbt_project/models/marts/fct_orders.sql
+expected:
+  decision: escalate
+  severity: block
+  must_cite:
+  - CON-031
+  - INC-230
+  must_name:
+  - dash_revenue_weekly
+  approvers:
+  - team/finance-data
+  must_not:
+  - proceed
+  why: ''
+tags:
+- column
+- destructive

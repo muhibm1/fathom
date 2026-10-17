@@ -1,0 +1,30 @@
+id: PB-005
+title: Drop order_count from fct_revenue
+family: locked_direct
+task: Remove order_count from fct_revenue; it can be computed in the dashboard.
+change:
+  ops:
+  - kind: drop_column
+    asset: fct_revenue
+    column: order_count
+  intent: null
+  files:
+  - fixture/dbt_project/models/marts/fct_revenue.sql
+expected:
+  decision: escalate
+  severity: block
+  must_cite:
+  - CON-031
+  - INC-230
+  must_name:
+  - dash_revenue_weekly
+  - finance_close_job
+  approvers:
+  - team/finance-data
+  must_not:
+  - proceed
+  why: ''
+tags:
+- column
+- destructive
+- contract

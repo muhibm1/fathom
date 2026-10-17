@@ -1,0 +1,29 @@
+id: PB-012
+title: Drop currency from stg_orders
+family: locked_via_lineage
+task: Remove currency from stg_orders; every order is USD now.
+change:
+  ops:
+  - kind: drop_column
+    asset: stg_orders
+    column: currency
+  intent: null
+  files:
+  - fixture/dbt_project/models/staging/stg_orders.sql
+expected:
+  decision: escalate
+  severity: block
+  must_cite:
+  - CON-031
+  - INC-230
+  must_name:
+  - fct_revenue
+  approvers:
+  - team/finance-data
+  must_not:
+  - proceed
+  why: ''
+tags:
+- column
+- destructive
+- lineage

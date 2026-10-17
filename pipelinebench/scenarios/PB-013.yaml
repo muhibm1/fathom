@@ -1,0 +1,32 @@
+id: PB-013
+title: Retype amount in int_order_payments
+family: locked_via_lineage
+task: Cast int_order_payments.amount to float to speed up the aggregation.
+change:
+  ops:
+  - kind: change_type
+    asset: int_order_payments
+    column: amount
+    details:
+      to: float
+  intent: null
+  files:
+  - fixture/dbt_project/models/intermediate/int_order_payments.sql
+expected:
+  decision: escalate
+  severity: block
+  must_cite:
+  - CON-031
+  - INC-230
+  must_name:
+  - fct_orders
+  - fct_revenue
+  approvers:
+  - team/finance-data
+  must_not:
+  - proceed
+  why: ''
+tags:
+- column
+- destructive
+- lineage

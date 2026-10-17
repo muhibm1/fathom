@@ -1,0 +1,11 @@
+id: CON-061
+scope:
+  assets: [model:mart_churn_scores]
+rule:
+  kind: requires_approval
+  approvers: [team/growth-analytics]
+severity: warn
+reason: mart_churn_scores trains the churn model (ml_churn_training); feature changes need growth-analytics sign-off so the model is retrained in step.
+source: null
+approvers: [team/growth-analytics]
+expires: null

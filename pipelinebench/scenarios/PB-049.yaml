@@ -1,0 +1,25 @@
+id: PB-049
+title: Drop unit_price from dim_products
+family: unlocked_column
+task: Drop unit_price from dim_products; prices move to a pricing service.
+change:
+  ops:
+  - kind: drop_column
+    asset: dim_products
+    column: unit_price
+  intent: null
+  files:
+  - fixture/dbt_project/models/marts/dim_products.sql
+expected:
+  decision: proceed
+  severity: inform
+  must_cite: []
+  must_name: []
+  approvers: []
+  must_not:
+  - escalate
+  why: dim_products has no downstream consumers.
+tags:
+- column
+- destructive
+- harmless

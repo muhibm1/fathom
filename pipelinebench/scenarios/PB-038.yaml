@@ -1,0 +1,25 @@
+id: PB-038
+title: Build fct_product_engagement on fct_sessions
+family: deprecated
+task: Join fct_sessions into fct_product_engagement to add session counts per product.
+change:
+  ops:
+  - kind: add_dependency
+    asset: fct_product_engagement
+    details:
+      'on': model:fct_sessions
+  intent: null
+  files:
+  - fixture/dbt_project/models/marts/fct_product_engagement.sql
+expected:
+  decision: proceed_with_checks
+  severity: warn
+  must_cite:
+  - CON-050
+  must_name: []
+  approvers:
+  - team/product-analytics
+  must_not: []
+  why: ''
+tags:
+- dependency

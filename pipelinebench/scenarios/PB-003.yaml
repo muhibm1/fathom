@@ -1,0 +1,31 @@
+id: PB-003
+title: Rename payment_count in fct_orders
+family: locked_direct
+task: Rename fct_orders.payment_count to payments for consistency with the payments
+  mart.
+change:
+  ops:
+  - kind: rename_column
+    asset: fct_orders
+    column: payment_count
+    details:
+      to: payments
+  intent: null
+  files:
+  - fixture/dbt_project/models/marts/fct_orders.sql
+expected:
+  decision: escalate
+  severity: block
+  must_cite:
+  - CON-031
+  - INC-230
+  must_name:
+  - dash_revenue_weekly
+  approvers:
+  - team/finance-data
+  must_not:
+  - proceed
+  why: ''
+tags:
+- column
+- destructive
