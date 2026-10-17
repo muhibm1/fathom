@@ -130,7 +130,10 @@ def build_server(cfg: OrionConfig | None = None, review_provider: Any = None) ->
             prov = review_provider or make_provider(provider or rc.provider, model=model or rc.model, base_url=rc.base_url, api_key_env=rc.api_key_env)
         except ProviderError as e:
             return {"ok": False, "error": str(e)}
-        r = run_review(store, cfg.root, prov, constraints=constraints, risk_model=risk_model, base_ref=base_ref, diff_text=diff, scope=_scope(cfg), ignore=_ignore(cfg))
+        try:
+            r = run_review(store, cfg.root, prov, constraints=constraints, risk_model=risk_model, base_ref=base_ref, diff_text=diff, scope=_scope(cfg), ignore=_ignore(cfg))
+        except Exception as e:  # noqa: BLE001 - a bad ref or diff is the caller's to fix; say so in the tool's own shape
+            return {"ok": False, "error": f"review failed: {e}"}
         return review_md(r) if format == "markdown" else _jsonable(r)
 
     return server

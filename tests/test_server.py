@@ -39,6 +39,8 @@ def test_review_tool_runs_a_diff(synced_store):
     assert "net_amount reads a dropped column" in titles, "model finding survives validation"
     missing = asyncio.run(server.call_tool("review", {}))
     assert "give base_ref or diff" in str(missing)
+    bad_ref = asyncio.run(server.call_tool("review", {"base_ref": "no-such-ref"}))
+    assert "review failed" in str(bad_ref)
 
 
 def test_ask_is_graph_scoped(synced_store):

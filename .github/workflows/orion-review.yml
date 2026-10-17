@@ -30,6 +30,7 @@ jobs:
         run: ../../.venv/bin/dbt parse --profiles-dir . -q
       - name: Build the graph
         run: .venv/bin/orion sync
+      # Output goes outside the checkout: the review diffs the working tree, untracked files included.
       - name: Review the diff
         env:
           ORION_ANTHROPIC_API_KEY: ${{ secrets.ORION_ANTHROPIC_API_KEY }}
@@ -44,7 +45,7 @@ jobs:
               echo
               echo "_Model review is off: add the \`ORION_ANTHROPIC_API_KEY\` repository secret to turn it on._"
             fi
-          } > review.md
+          } > "$RUNNER_TEMP/orion-review.md"
       - name: Post or update the review comment
         env:
           GH_TOKEN: ${{ github.token }}
@@ -53,7 +54,7 @@ jobs:
         run: |
           id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate --jq '.[] | select(.body | startswith("<!-- orion-review -->")) | .id' | tail -n1)
           if [ -n "$id" ]; then
-            gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@review.md > /dev/null
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@"$RUNNER_TEMP/orion-review.md" > /dev/null
           else
-            gh pr comment "$PR" --body-file review.md
+            gh pr comment "$PR" --body-file "$RUNNER_TEMP/orion-review.md"
           fi
