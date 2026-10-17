@@ -22,6 +22,7 @@ jobs:
         env:
           PIPELINEBENCH_DB: warehouse.duckdb
         run: |
+          ../../.venv/bin/dbt seed --profiles-dir . -q
           ../../.venv/bin/dbt build --profiles-dir . -q
           ../../.venv/bin/dbt docs generate --profiles-dir . -q
       - name: Test
