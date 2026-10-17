@@ -122,6 +122,7 @@ class OpenAICompatibleProvider:
     timeout: float = 120.0
     retries: int = 3
     api_key_env: str = "OPENAI_API_KEY"
+    last_usage: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         self.api_key = self.api_key or os.environ.get(self.api_key_env)
@@ -135,6 +136,7 @@ class OpenAICompatibleProvider:
         }
         headers = {"authorization": f"Bearer {self.api_key}"} if self.api_key else {}
         resp = _post(f"{self.base_url.rstrip('/')}/chat/completions", headers, body, timeout=self.timeout, retries=self.retries)
+        self.last_usage = resp.get("usage")
         try:
             text = resp["choices"][0]["message"]["content"] or ""
         except (KeyError, IndexError, TypeError) as e:

@@ -133,7 +133,9 @@ def _facts(ctx: ReviewContext) -> str:
         return "No platform assets resolved for this diff; review it as ordinary code."
     lines = [f"Deterministic pre-flight: severity {v['severity']}, risk {v['risk']['score']}. {v.get('summary', '')}"]
     for o in v["change"]["ops"]:
-        lines.append(f"- op {o['kind']} on node:{o['asset']}" + (f" column {o['column']}" if o.get("column") else ""))
+        d = o.get("details") or {}
+        change = f": `{d['from']}` -> `{d['to']}`" if "from" in d and "to" in d else ""
+        lines.append(f"- op {o['kind']} on node:{o['asset']}" + (f" column {o['column']}" if o.get("column") else "") + change)
     for c in v["constraints"]:
         if c["status"] == "fires":
             lines.append(f"- constraint:{c['id']} ({c['kind']}, {c['severity']}) fires: {c['detail']}. Reason: {c['reason']}")
@@ -268,7 +270,9 @@ def _dedupe(det: list[dict[str, Any]], model: list[dict[str, Any]]) -> list[dict
     covered = {(d["path"], e) for d in det for e in d["evidence"] if e.startswith("constraint:")}
     kept = []
     for m in model:
-        if m["status"] == "valid" and any((m["path"], e) in covered for e in m["evidence"] if e.startswith("constraint:")):
+        # A finding that only restates a firing constraint is a duplicate; one that points at a diff line says something new.
+        restates = not any(e.startswith("hunk:") for e in m["evidence"])
+        if m["status"] == "valid" and restates and any((m["path"], e) in covered for e in m["evidence"] if e.startswith("constraint:")):
             continue
         key = (m["path"], m["line"], m["title"].lower())
         if any((k["path"], k["line"], k["title"].lower()) == key for k in kept):
@@ -304,6 +308,7 @@ def review(store: Store, repo_root: Path, provider: Provider, *, constraints: li
         "unresolved": v.get("change", {}).get("unresolved", []),
         "verdict_id": v.get("verdict_id"),
         "verdict_summary": v.get("summary") or v.get("error"),
+        "usage": getattr(provider, "last_usage", None),
         "counts": {"deterministic": len(det), "model_valid": sum(m["status"] == "valid" for m in model), "uncertain": sum(m["status"] == "uncertain" for m in model), "rejected": sum(m["status"] == "rejected" for m in model)},
     }
 

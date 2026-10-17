@@ -100,12 +100,14 @@ def test_citing_a_firing_constraint_raises_severity_and_deduplicates(synced_stor
     stub = StubProvider({"findings": [
         {"path": FCT, "line": 8, "severity": "inform", "category": "data_contract", "title": "discount_pct is part of a contract", "body": "CON-031.", "evidence": ["constraint:CON-031"]},
         {"path": FCT, "line": 8, "severity": "inform", "category": "correctness", "title": "net_amount still references discount_pct", "body": "The expression on line 8 reads the column this diff removes.", "evidence": ["hunk:" + FCT + ":8"]},
+        {"path": FCT, "line": 8, "severity": "warn", "category": "data_contract", "title": "net_amount now wrong for finance", "body": "A bug that also cites the contract it breaks.", "evidence": ["hunk:" + FCT + ":8", "constraint:CON-031"]},
     ]})
     r = _review(synced_store, constraints, DROP_DIFF, stub)
     titles = [f["title"] for f in r["findings"]]
     assert titles[0].startswith("CON-031"), "deterministic first"
     assert "discount_pct is part of a contract" not in titles, "covered by the deterministic finding"
     assert "net_amount still references discount_pct" in titles
+    assert "net_amount now wrong for finance" in titles, "a correctness bug citing the constraint is not a duplicate of it"
 
 
 def test_provider_failure_still_returns_deterministic_review(synced_store, constraints):

@@ -371,6 +371,9 @@ def review(
             console.print(f"  [dim]{len(r['rejected'])} model findings rejected[/dim]")
         for u in r["unresolved"]:
             console.print(f"  [yellow]unresolved[/yellow] {escape(str(u.get('path') or u.get('intent')))}")
+        if r.get("usage"):
+            u = r["usage"]
+            console.print(f"  [dim]tokens in {u.get('input_tokens', u.get('prompt_tokens'))} out {u.get('output_tokens', u.get('completion_tokens'))}[/dim]")
 
 
 @app.command()
