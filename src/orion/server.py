@@ -116,8 +116,8 @@ def build_server(cfg: OrionConfig | None = None, review_provider: Any = None) ->
         ranker = cfg.retrieval.ranker
         return _jsonable(ask_corpus(store, question, scope, limit, ranker=ranker, embedder=make_embedder(cfg.retrieval.model) if ranker != "bm25" else None))
 
-    @server.tool(name="review", description="Review a diff: deterministic findings from the platform graph and constraints first, then findings from the configured model provider, each checked against the diff and the store (unsupported ones are marked uncertain, ones outside the diff rejected). Give a git base ref (working tree against it) or a unified diff. Every finding carries a location and evidence.")
-    def review_tool(base_ref: str | None = None, diff: str | None = None, provider: str | None = None, model: str | None = None, format: str = "json") -> dict[str, Any] | str:
+    @server.tool(name="review", description="Review a diff: deterministic findings from the platform graph and constraints first, then findings from the configured model provider, each checked against the diff and the store (unsupported ones are marked uncertain, ones outside the diff rejected). Give a git base ref (working tree against it) or a unified diff. The provider is the one configured in orion.yaml. Every finding carries a location and evidence.")
+    def review_tool(base_ref: str | None = None, diff: str | None = None, format: str = "json") -> dict[str, Any] | str:
         from .cli import _ignore, _scope
         from .providers import ProviderError, make_provider
         from .review import review as run_review
@@ -127,7 +127,8 @@ def build_server(cfg: OrionConfig | None = None, review_provider: Any = None) ->
             return {"ok": False, "error": "give base_ref or diff"}
         rc = cfg.review
         try:
-            prov = review_provider or make_provider(provider or rc.provider, model=model or rc.model, base_url=rc.base_url, api_key_env=rc.api_key_env)
+            # The provider and model come from orion.yaml only, so a calling agent cannot redirect the diff or the spend.
+            prov = review_provider or make_provider(rc.provider, model=rc.model, base_url=rc.base_url, api_key_env=rc.api_key_env)
         except ProviderError as e:
             return {"ok": False, "error": str(e)}
         try:
